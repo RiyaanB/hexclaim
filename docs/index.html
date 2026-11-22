@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hexclaim — a 3-minute hex strategy duel</title>
+<meta name="description" content="Clone into neighbouring hexes or jump two away — every enemy piece touching your landing spot flips to your colour. Duel bots from Rookie to Grandmaster, play the Daily, or pass-and-play with a friend.">
+<meta name="theme-color" content="#0d1120">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Hexclaim — a 3-minute hex strategy duel">
+<meta property="og:description" content="Clone, jump, flip. Claim the board. Vs bots (Rookie → Grandmaster), a Daily challenge, pass-and-play and a 4-player brawl.">
+<meta property="og:image" content="og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-64.png" type="image/png" sizes="64x64">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="css/style.css">
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ TITLE ============ -->
+  <section class="screen active" id="scr-title" aria-labelledby="logo">
+    <div class="title-art" aria-hidden="true"><canvas id="attract"></canvas></div>
+    <div class="title-inner">
+      <h1 id="logo" class="logo"><span class="l-hex">HEX</span><span class="l-claim">CLAIM</span></h1>
+      <p class="tagline">Clone. Jump. Flip. Claim the board.</p>
+      <nav class="menu" aria-label="Game modes">
+        <button class="btn btn-primary btn-mode" data-act="mode-bot">
+          <span class="mi" aria-hidden="true">🤖</span><span class="mt"><b>Play vs Bot</b><small>4 levels · Rookie → Grandmaster</small></span>
+        </button>
+        <button class="btn btn-daily btn-mode" data-act="mode-daily">
+          <span class="mi" aria-hidden="true">📅</span><span class="mt"><b id="daily-label">Daily Challenge</b><small id="daily-sub">Same board for everyone today</small></span>
+        </button>
+        <button class="btn btn-mode" data-act="mode-pnp">
+          <span class="mi" aria-hidden="true">🤝</span><span class="mt"><b>Pass &amp; Play</b><small>2 players · one device</small></span>
+        </button>
+        <button class="btn btn-mode" data-act="mode-ffa">
+          <span class="mi" aria-hidden="true">💥</span><span class="mt"><b>4-Player Brawl</b><small>you vs 3 bots</small></span>
+        </button>
+      </nav>
+      <div class="title-links">
+        <button class="link" data-act="howto">How to play</button>
+        <button class="link" data-act="stats">Stats</button>
+        <button class="link mute-toggle" data-act="mute" aria-pressed="false"><span class="mute-ico">🔊</span> Sound</button>
+        <a class="link" href="../arcade/">More games ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SETUP ============ -->
+  <section class="screen" id="scr-setup" aria-labelledby="setup-title">
+    <div class="setup-inner">
+      <header class="setup-head">
+        <button class="icon-btn" data-act="back" aria-label="Back to menu">←</button>
+        <h2 id="setup-title">Play vs Bot</h2>
+        <span class="spacer"></span>
+      </header>
+      <div class="setup-body">
+        <section class="field" id="field-level">
+          <h3>Opponent</h3>
+          <div class="chips" id="level-chips" role="radiogroup" aria-label="Bot difficulty"></div>
+          <p class="hint" id="level-blurb"></p>
+        </section>
+        <section class="field" id="field-seat">
+          <h3>You play</h3>
+          <div class="chips" id="seat-chips" role="radiogroup" aria-label="Your colour">
+            <button class="chip seat" role="radio" data-seat="1"><i class="dot p1"></i>Coral · 1st</button>
+            <button class="chip seat" role="radio" data-seat="2"><i class="dot p2"></i>Teal · 2nd</button>
+          </div>
+        </section>
+        <section class="field">
+          <h3>Board</h3>
+          <div class="boards" id="board-cards" role="radiogroup" aria-label="Board shape"></div>
+        </section>
+      </div>
+      <footer class="setup-foot">
+        <button class="btn btn-primary btn-wide" data-act="start" id="btn-start">Start game</button>
+      </footer>
+    </div>
+  </section>
+
+  <!-- ============ GAME ============ -->
+  <section class="screen" id="scr-game" aria-label="Game">
+    <div class="game-grid">
+      <header class="topbar">
+        <button class="icon-btn" data-act="pause" aria-label="Menu">☰</button>
+        <div class="match-title" id="match-title">vs Bot</div>
+        <button class="icon-btn mute-toggle" data-act="mute" aria-label="Toggle sound"><span class="mute-ico">🔊</span></button>
+      </header>
+      <div class="side">
+        <div class="players" id="players"></div>
+        <div class="scorebar" id="scorebar" aria-hidden="true"></div>
+        <div class="status" id="status" role="status" aria-live="polite">&nbsp;</div>
+        <div class="controls" id="controls">
+          <button class="btn btn-ghost" data-act="undo" id="btn-undo"><span aria-hidden="true">↶</span> Undo</button>
+          <button class="btn btn-ghost" data-act="howto" aria-label="How to play"><span aria-hidden="true">?</span> Rules</button>
+        </div>
+        <div class="controls replay-controls" id="replay-controls" hidden>
+          <button class="icon-btn" data-act="rp-start" aria-label="First move">⏮</button>
+          <button class="icon-btn" data-act="rp-prev" aria-label="Previous move">◀</button>
+          <button class="icon-btn rp-play" data-act="rp-play" aria-label="Play / pause">▶</button>
+          <button class="icon-btn" data-act="rp-next" aria-label="Next move">▶|</button>
+          <input type="range" id="rp-slider" min="0" max="0" value="0" aria-label="Replay position">
+          <button class="btn btn-ghost" data-act="rp-done">Results</button>
+        </div>
+        <ul class="legend" aria-label="Moves">
+          <li><i class="lg-dot" aria-hidden="true"></i><span><b>Clone</b> to a touching hex. Your piece stays, so you gain +1.</span></li>
+          <li><i class="lg-ring" aria-hidden="true"></i><span><b>Jump</b> two hexes. Your piece moves and leaves a gap.</span></li>
+          <li><i class="lg-flip" aria-hidden="true"></i><span>Enemies <b>touching</b> where you land flip to you.</span></li>
+        </ul>
+        <p class="keys-hint">Keys: arrows move · Enter select/place · Esc cancel · U undo · M mute</p>
+      </div>
+      <div class="board-wrap" id="board-wrap">
+        <canvas id="board" aria-label="Hex board" tabindex="0"></canvas>
+        <div class="banner" id="banner" aria-hidden="true"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ OVERLAYS ============ -->
+  <div class="overlay" id="dlg-howto" role="dialog" aria-modal="true" aria-labelledby="howto-title" hidden>
+    <div class="card howto">
+      <h2 id="howto-title">How to play</h2>
+      <div class="steps" id="howto-steps">
+        <div class="step active" data-step="0">
+          <div class="step-art" data-art="clone"></div>
+          <h3><span class="num">1</span> Clone</h3>
+          <p>Pick one of your pieces and tap a <b>touching</b> hex. A copy appears there — your piece stays put.</p>
+        </div>
+        <div class="step" data-step="1">
+          <div class="step-art" data-art="jump"></div>
+          <h3><span class="num">2</span> Jump</h3>
+          <p>Or tap a hex <b>two steps away</b>. Your piece leaps there, leaving an empty hex behind.</p>
+        </div>
+        <div class="step" data-step="2">
+          <div class="step-art" data-art="flip"></div>
+          <h3><span class="num">3</span> Flip &amp; claim</h3>
+          <p>Every enemy piece <b>touching</b> where you land flips to your colour. When the board fills up, most hexes wins. Can't move? Your rival claims every empty hex!</p>
+        </div>
+      </div>
+      <div class="step-dots" id="step-dots"><i class="on"></i><i></i><i></i></div>
+      <div class="row">
+        <button class="btn btn-ghost" data-act="howto-prev">Back</button>
+        <button class="btn btn-primary" data-act="howto-next" id="howto-next">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="dlg-pause" role="dialog" aria-modal="true" aria-labelledby="pause-title" hidden>
+    <div class="card small">
+      <h2 id="pause-title">Paused</h2>
+      <div class="stack">
+        <button class="btn btn-primary" data-act="resume">Resume</button>
+        <button class="btn" data-act="restart" id="btn-restart">Restart</button>
+        <button class="btn" data-act="howto">How to play</button>
+        <button class="btn btn-ghost" data-act="quit">Quit to menu</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="dlg-end" role="dialog" aria-modal="true" aria-labelledby="end-title" hidden>
+    <div class="card end">
+      <div class="end-burst" aria-hidden="true"></div>
+      <p class="end-kicker" id="end-kicker">vs Bot</p>
+      <h2 id="end-title">Victory!</h2>
+      <p class="end-reason" id="end-reason"></p>
+      <div class="stars" id="end-stars" hidden></div>
+      <div class="end-scores" id="end-scores"></div>
+      <div class="end-graph"><canvas id="end-graph" aria-label="Hex count over the game"></canvas></div>
+      <p class="end-stats" id="end-stats"></p>
+      <div class="stack">
+        <button class="btn btn-primary" data-act="share" id="btn-share" hidden>Share result</button>
+        <button class="btn" data-act="suggest" id="btn-suggest" hidden>Try another bot</button>
+        <button class="btn btn-primary" data-act="rematch" id="btn-rematch">Rematch</button>
+        <div class="row">
+          <button class="btn" data-act="replay">▶ Replay</button>
+          <button class="btn btn-ghost" data-act="quit">Menu</button>
+        </div>
+      </div>
+      <p class="end-next" id="end-next"></p>
+    </div>
+  </div>
+
+  <div class="overlay" id="dlg-daily" role="dialog" aria-modal="true" aria-labelledby="daily-title" hidden>
+    <div class="card daily-card">
+      <p class="end-kicker" id="daily-kicker">Daily</p>
+      <h2 id="daily-title">Daily</h2>
+      <div id="daily-result" hidden></div>
+      <p class="daily-body" id="daily-body"></p>
+      <ul class="daily-goals" id="daily-goals"></ul>
+      <div class="stack">
+        <button class="btn btn-primary" data-act="share" id="daily-share" hidden>Share result</button>
+        <button class="btn btn-primary" data-act="daily-go" id="daily-go">Start</button>
+        <button class="btn btn-ghost" data-act="daily-close">Back</button>
+      </div>
+      <p class="end-next" id="daily-next"></p>
+    </div>
+  </div>
+
+  <div class="overlay" id="dlg-stats" role="dialog" aria-modal="true" aria-labelledby="stats-title" hidden>
+    <div class="card">
+      <h2 id="stats-title">Your stats</h2>
+      <div id="stats-body"></div>
+      <p class="fine">Stored only on this device.</p>
+      <div class="row"><button class="btn btn-primary" data-act="close">Close</button></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+<noscript><p style="color:#fff;padding:2em">Hexclaim needs JavaScript.</p></noscript>
+</body>
+</html>
