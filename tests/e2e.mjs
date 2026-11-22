@@ -107,13 +107,14 @@ async function setupPick(page, vp, { level, board, seat } = {}) {
 async function runViewport(browser, vp) {
   console.log(`\n=== ${vp} ===`);
   const ctx = await browser.newContext({ ...VIEWPORTS[vp], permissions: vp === 'desktop' ? ['clipboard-read', 'clipboard-write'] : [] });
+  await ctx.route(/gc\.zgo\.at|goatcounter\.com/, (r) => r.fulfill({ status: 200, contentType: 'text/javascript', body: '' })); // analytics stubbed in tests
   const page = await ctx.newPage();
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(`console.error: ${m.text()}`); });
   page.on("pageerror", (e) => errors.push(`pageerror: ${e.message} @ ${(e.stack || "").split("\n").slice(1, 4).join(" < ")}`));
   page.on('requestfailed', (r) => errors.push(`requestfailed: ${r.url()}`));
   const external = [];
-  page.on('request', (r) => { if (!r.url().startsWith(BASE) && !r.url().startsWith('data:') && !r.url().startsWith('blob:')) external.push(r.url()); });
+  page.on('request', (r) => { if (!/gc\.zgo\.at|goatcounter\.com/.test(r.url()) && !r.url().startsWith(BASE) && !r.url().startsWith('data:') && !r.url().startsWith('blob:')) external.push(r.url()); });
 
   await page.goto(BASE);
   await page.waitForFunction(() => window.__hex && window.__hex.screen === 'title');
